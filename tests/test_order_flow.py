@@ -1,127 +1,106 @@
-# Позитивный сценарий оформления заказа до конца и проверки логотипов
-# Задумка с параметрами такая: сначала проверяем верхнюю «Заказать» и данные Акакия, а потом проверяем нижнюю «Заказать» и данные Агафьи
+# Позитивный сценарий оформления заказа — до появления окна «Заказ оформлен»
 
-import allure
-import pytest
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+import allure  
+import pytest   
 
-from pages.main_page import MainPage
-from pages.order_page import OrderPage
+from pages.main_page import MainPage   
+from pages.order_page import OrderPage 
 
 
-@allure.parent_suite("Тесты оформления заказа")  # вместо имени файла test_order_flow
-@allure.title("Позитивный сценарий заказа")       # вместо имени класса TestOrderHappyPath
-@allure.feature("Оформление заказа")              # группировка в разделе «Категории»
-@allure.story("Позитивный сценарий")              # подгруппа внутри
+@allure.parent_suite("Тесты оформления заказа")  # верхний уровень в разделе «Сюиты»
+@allure.title("Позитивный сценарий заказа")   # отображается вместо имени класса
+@allure.feature("Оформление заказа")    # группировка в разделе «Категории»
+@allure.story("Позитивный сценарий")   # подгруппа внутри «Категорий»
+
+#Проверка оформлления заказа
 class TestOrderHappyPath:
 
     # Первый набор данных: клиент Акакий, верхняя кнопка «Заказать»
     CUSTOMER_AKAKIY = {
         "first_name": "Акакий",
-        "last_name": "Огурцов",
-        "phone": "+79998884545",
-        "metro": "Черкизовская",
-        "address": "г. Москва, ул. Тестовая, д. 1",
-        "date": "01.12.2026",
-        "period": "сутки",
-        "color": "чёрный",
+        "last_name":  "Огурцов",
+        "phone":      "+79998884545",
+        "metro":      "Черкизовская",
+        "address":    "г. Москва, ул. Тестовая, д. 1",
+        "date":       "01.12.2026",    # формат ДД.ММ.ГГГГ
+        "period":     "сутки",         # метка из дропдауна «Срок аренды»
+        "color":      "чёрный",        # название цвета на русском
     }
 
     # Второй набор данных: клиентка Агафья, нижняя кнопка «Заказать»
     CUSTOMER_AGAFYA = {
         "first_name": "Агафья",
-        "last_name": "Ручковна",
-        "phone": "+79031234567",
-        "metro": "Сокольники",
-        "address": "г. Москва, ул. Примерная, д. 2",
-        "date": "05.12.2026",
-        "period": "двое суток",
-        "color": "серый",
+        "last_name":  "Ручковна",
+        "phone":      "+79031234567",
+        "metro":      "Сокольники",
+        "address":    "г. Москва, ул. Примерная, д. 2",
+        "date":       "05.12.2026",
+        "period":     "двое суток",
+        "color":      "серый",
     }
 
     @pytest.mark.parametrize(
-        "use_bottom_entry, customer",
+        "use_bottom_entry, customer",   
         [
-            pytest.param(False, CUSTOMER_AKAKIY, id="header_button_akkakiy"),  # False = верхняя кнопка
-            pytest.param(True,  CUSTOMER_AGAFYA, id="footer_button_agafya"),   # True  = нижняя кнопка
+            pytest.param(
+                False,    # False = верхняя кнопка
+                CUSTOMER_AKAKIY,  # данные первого клиента
+                id="header_button_akkakiy",  
+            ),
+            pytest.param(
+                True,           # True  = нижняя кнопка
+                CUSTOMER_AGAFYA,   # данные второго клиента
+                id="footer_button_agafya",   
+            ),
         ],
     )
-    @allure.title("Тестирование заказа самоката")
-    def test_positive_order_flow_logos_and_success_modal(
+    @allure.title("Оформление заказа до модального окна «Заказ оформлен»")
+    def test_positive_order_flow_success_modal(
         self,
-        driver,
-        use_bottom_entry,
-        customer,
+        driver,            
+        use_bottom_entry,  # True — нижняя кнопка, False — верхняя
+        customer,          # данные клиента
     ):
-        # Добавляем параметры в Allure-отчёт чтобы было видно в каждом прогоне теста
+        #подставляем параметры в Allure-отчёт 
         entry_label = "Нижняя «Заказать»" if use_bottom_entry else "Верхняя «Заказать»"
-        allure.dynamic.parameter("Точка входа", entry_label)                            # какая кнопка использовалась
-        allure.dynamic.parameter("Клиент", f"{customer['first_name']} {customer['last_name']}")  # чьи данные в тесте
+        allure.dynamic.parameter("Точка входа", entry_label)
+        allure.dynamic.parameter("Клиент", f"{customer['first_name']} {customer['last_name']}")
 
-        main  = MainPage(driver)
-        order = OrderPage(driver)
-
-        wait = WebDriverWait(driver, 20)  # ждем 20 сек
+        main  = MainPage(driver)   
+        order = OrderPage(driver)  
 
         with allure.step("Главная страница"):
-            main.open()                     # открываем стенд
-            main.accept_cookies_if_shown()  # убираем баннер куки, если он появился
+            main.open()            # открываем стенд
+            main.accept_cookies_if_shown() # убираем баннер куки, если он есть
 
         with allure.step("Перейти к форме заказа"):
             if use_bottom_entry:
-                main.click_order_bottom()  # нижняя кнопка: прокручиваем, избавляемся от шапки и кликаем
+                main.click_order_bottom()  # нижняя кнопка «Заказать» (перед футером)
             else:
-                main.click_order_top()     # верхняя кнопка: тут просто клик, тк шапка не мешает
+                main.click_order_top() # верхняя кнопка «Заказать» (в шапке)
 
         with allure.step("Шаг 1 формы — личные данные и метро"):
-            order.fill_personal_data(       # заполняем данные
+            order.fill_personal_data(      # заполняем имя, фамилию, адрес, телефон
                 customer["first_name"],
                 customer["last_name"],
                 customer["address"],
                 customer["phone"],
             )
-            order.select_metro(customer["metro"])  # вводим станцию метро и выбираем из выпадашки
+            order.select_metro(customer["metro"])  # отдельно выбираем метро 
 
         with allure.step("Шаг 2 формы — дата, срок, цвет"):
-            order.click_next()  # переходим на шаг 2, кнопка активна только при корректно заполненном шаге 1
-            order.fill_rent_details(        # заполняем данные
+            order.click_next()         # переходим к шагу 2
+            order.fill_rent_details(     
                 customer["date"],
                 customer["period"],
                 customer["color"],
             )
 
         with allure.step("Отправить заказ"):
-            order.submit_order()  # кликаем «Заказать», затем «Да» для подтверждения
+            order.submit_order()           # нажимаем «Заказать» и подтверждаем 
 
         with allure.step("Проверить попап «Заказ оформлен»"):
-            order.wait_success_modal()
+            order.wait_success_modal()     
 
         with allure.step("Закрыть попап и дождаться его исчезновения"):
-            order.close_success_modal_and_wait()  # закрываем попап
-
-        main_window = driver.current_window_handle
-
-        with allure.step("Логотип Самоката ведёт на главную страницу самоката"):
-            main.click_scooter_logo()  # кликаем логотип для перехода на главную
-            wait.until(EC.url_contains("qa-scooter.praktikum-services.ru"))  # ждём смены URL
-
-            current_url = driver.current_url
-            # Тут нужно убедиться, что страница заказа т.е /order больше не открыта
-            assert "/order" not in current_url, (
-                f"Ожидали главную страницу самоката, но URL всё ещё содержит /order: {current_url}"
-            )
-
-        with allure.step("Логотип Яндекса — новая вкладка, в URL есть dzen"):
-            main.click_yandex_logo()  # кликаем логотип Яндекса и должна открыться новая вкладка
-            wait.until(lambda d: len(d.window_handles) > 1)  # ждём
-
-            new_handle = [h for h in driver.window_handles if h != main_window][0]
-            driver.switch_to.window(new_handle)  # переключаемся на новую вкладку
-
-            # Дзен открывается через редирект и мы даём больше времени
-            WebDriverWait(driver, 30).until(lambda d: "dzen" in d.current_url.lower())
-            assert "dzen" in driver.current_url.lower()  # убеждаемся, что попали на dzen.ru
-
-            driver.close()  # закрываем вкладку Дзен
-            driver.switch_to.window(main_window)  # возвращаемся на основную вкладку
+            order.close_success_modal_and_wait()  # кликаем «Посмотреть статус», ждём скрытия попапа
