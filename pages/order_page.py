@@ -1,129 +1,161 @@
-# Page Object страницы заказа: два шага формы и попап подтверждения
+# Page Object страницы оформления заказа
+# тут шаг 1 (личные данные), шаг 2 (детали аренды), подтверждение и модальное окно
 
-from selenium.webdriver import Keys  # тут клавиши клавиатуры: ESC, ENTER и тд
-from selenium.webdriver.common.by import By  
-from selenium.webdriver.remote.webelement import WebElement  
-from selenium.webdriver.remote.webdriver import WebDriver  
-from selenium.webdriver.support import expected_conditions as EC  
-from selenium.webdriver.support.ui import WebDriverWait  
+import allure                                  
+from selenium.webdriver import Keys            
+from selenium.webdriver.common.by import By    
+
+from pages.base_page import BasePage           
+
+#Page Object формы заказа самоката
+class OrderPage(BasePage):
+
+    # Локаторы шага 1 — личные данные  
+
+    FIRST_NAME  = (By.XPATH, "//input[@placeholder='* Имя']")                              
+    LAST_NAME   = (By.XPATH, "//input[@placeholder='* Фамилия']")                          
+    ADDRESS     = (By.XPATH, "//input[@placeholder='* Адрес: куда привезти заказ']")      
+    METRO_INPUT = (By.XPATH, "//input[@placeholder='* Станция метро']")                   
+    PHONE       = (By.XPATH, "//input[@placeholder='* Телефон: на него позвонит курьер']")
+    BUTTON_NEXT = (By.XPATH, "//button[text()='Далее']")     
 
 
-class OrderPage:
+    # Локаторы шага 2 — детали аренды
 
-    #личные данные
-    FIRST_NAME   = (By.XPATH, "//input[@placeholder='* Имя']")      # поле Имя
-    LAST_NAME    = (By.XPATH, "//input[@placeholder='* Фамилия']")       # поле Фамилия
-    ADDRESS      = (By.XPATH, "//input[@placeholder='* Адрес: куда привезти заказ']")     # поле адреса доставки
-    METRO_INPUT  = (By.XPATH, "//input[@placeholder='* Станция метро']")      # поле поиск станции метро
-    PHONE        = (By.XPATH, "//input[@placeholder='* Телефон: на него позвонит курьер']")  # поле номера телефона
-    BUTTON_NEXT  = (By.XPATH, "//button[text()='Далее']")       # переход дальше
+    DELIVERY_DATE = (By.XPATH, "//input[@placeholder='* Когда привезти самокат']")  # поле выбора даты
 
-    #параметры аренды
-    DELIVERY_DATE = (By.XPATH, "//input[@placeholder='* Когда привезти самокат']")  # поле выбора даты; открывает календарь
-
-    RENT_PERIOD_FIELD = (  # выбор Срока аренды
+    # Дропдаун «Срок аренды» 
+    RENT_PERIOD_FIELD = (
         By.XPATH,
         "//div[contains(@class,'Dropdown-placeholder') and contains(.,'Срок аренды')]",
     )
 
-    BUTTON_ORDER = (  #кнопка «Заказать» на шаге 2, она  отличается от верхней и нижней кнопок с главной страницы
+   
+    # Локаторы подтверждения заказа
+
+    # Кнопка «Заказать» на шаге 2
+    BUTTON_ORDER = (
         By.XPATH,
         "//button[contains(@class,'Button_Middle') and text()='Заказать']",
     )
 
-    #окно подтверждения 
-    BUTTON_YES = (By.XPATH, "//button[text()='Да']")  # кнопка подтверждения в диалоге «Хотите оформить заказ?»
+    BUTTON_YES = (By.XPATH, "//button[text()='Да']")  # кнопка подтверждения в диалоге «Вы уверены?»
 
-    MODAL_SUCCESS_HEADER = (  # заголовок попапа «Заказ оформлен» 
+
+    # Локаторы модального окна успеха
+
+    # Заголовок попапа «Заказ оформлен» 
+    MODAL_SUCCESS_HEADER = (
         By.XPATH,
         "//div[contains(@class,'Order_ModalHeader') and contains(.,'Заказ оформлен')]",
     )
 
-    def __init__(self, driver: WebDriver, wait_timeout: int = 15):
-        self.driver = driver                            
-        self.wait = WebDriverWait(driver, wait_timeout) 
+    # Кнопка «Посмотреть статус» внутри попапа, которая закрывает модальное окно 
+    BUTTON_VIEW_STATUS = (
+        By.XPATH,
+        "//button[contains(text(),'Посмотреть статус')]",
+    )
 
-    @staticmethod
-    def _scroll_into_view(element: WebElement) -> None:
-        _ = element.location_once_scrolled_into_view  # прокрутка браузера к элементу 
 
-    def fill_personal_data(self, first_name: str, last_name: str, address: str, phone: str):
-        self.wait.until(EC.visibility_of_element_located(self.FIRST_NAME)).send_keys(first_name)  # ждём появления формы и вводим имя
-        self.driver.find_element(*self.LAST_NAME).send_keys(last_name)   # поля после первого ищем без ожидания тк форма уже есть
-        self.driver.find_element(*self.ADDRESS).send_keys(address)        
-        self.driver.find_element(*self.PHONE).send_keys(phone)           
+    # Методы шага 1
 
-    def select_metro(self, station_name: str):
-        metro = self.wait.until(EC.element_to_be_clickable(self.METRO_INPUT))  # ждём пока поле метро станет кликабельным
-        metro.click()                      
-        metro.send_keys(station_name)       # вводим станцию
+    @allure.step("Заполнить персональные данные на шаге 1")
+    def fill_personal_data(
+        self,
+        first_name: str,
+        last_name: str,
+        address: str,
+        phone: str,
+    ) -> None:
+        
+        #водим имя, фамилию, адрес и телефон.
+        self.wait_visible(self.FIRST_NAME).send_keys(first_name)   # ждём поле и вводим имя
+        self.wait_visible(self.LAST_NAME).send_keys(last_name)    # фамилия
+        self.wait_visible(self.ADDRESS).send_keys(address)     # адрес доставки
+        self.wait_visible(self.PHONE).send_keys(phone)    # номер телефона
 
-        option_xpath = f"//button[.//div[text()='{station_name}']]"  
-        option = self.wait.until(EC.element_to_be_clickable((By.XPATH, option_xpath)))  # ждём 
-        self._scroll_into_view(option)    # прокручиваем, чтобы станция поала в область видимости
-        option.click()        # выбираем станцию 
+    @allure.step("Выбрать станцию метро «{station_name}»")
+    def select_metro(self, station_name: str) -> None:
 
-        metro.send_keys(Keys.ESCAPE)        # на всякий случай закрываем список клавишей ESC
+        #кликаем по полю метро, вводим название, выбираем и закрываем
+        metro = self.wait_clickable(self.METRO_INPUT)
+        metro.click()               
+        metro.send_keys(station_name)  # вводим название
 
-    def click_next(self):
-        self.wait.until(EC.element_to_be_clickable(self.BUTTON_NEXT)).click()  # тут уже переходим к шагу 2
-
-    def fill_rent_details(self, date_dd_mm_yyyy: str, period_label: str, color: str):
-        date_el = self.wait.until(EC.visibility_of_element_located(self.DELIVERY_DATE))  # ждём поле даты 
-        date_el.click()  # клик открывает календарь
-
-        try:
-            date_el.clear()  # пробуем очистить поле стандартным методом
-        except Exception:
-            date_el.send_keys(Keys.CONTROL, "a")  # если clear() не сработал — выделяем всё через Ctrl+A
-            date_el.send_keys(Keys.BACKSPACE)      # а потом удаляем то что выделили
-
-        date_el.send_keys(date_dd_mm_yyyy)  # вводим дату 
-        date_el.send_keys(Keys.ESCAPE)    # закрываем календарь 
-
-        self.wait.until(  # ждём пока календарь полностью закроется, так как некст клик может попасть в него
-            EC.invisibility_of_element_located((By.CLASS_NAME, "react-datepicker__day-name")),
-        )
-
-        self.wait.until(EC.element_to_be_clickable(self.RENT_PERIOD_FIELD)).click()  # открываем «Срок аренды»
-
-        period_xpath = (  
-            f"//div[contains(@class,'Dropdown-menu')]//div[text()='{period_label}']"
-            f" | //div[contains(@class,'Dropdown-option') and text()='{period_label}']"
-        )
-        period_option = self.wait.until(EC.element_to_be_clickable((By.XPATH, period_xpath)))
-        period_option.click()  # выбираем срок аренды 
-
-        color_id = "black" if color.lower() in ("чёрный", "черный", "black") else "grey"  # определяем id чекбокса по цвету
-        color_box = self.wait.until(EC.element_to_be_clickable((By.ID, color_id)))  # ждём 
-        self._scroll_into_view(color_box)  # прокручиваем 
-        color_box.click()    # выбираем нужный цвет
-
-    def submit_order(self):
-        self.wait.until(EC.element_to_be_clickable(self.BUTTON_ORDER)).click()  # нажимаем «Заказать» 
-
-        try:
-            yes = WebDriverWait(self.driver, 3).until(  # ждём кнопку «Да» не дольше 3 сек
-                EC.element_to_be_clickable(self.BUTTON_YES),
-            )
-            yes.click()  # подтверждаем заказ 
-        except Exception:
-            pass  
-
-    def wait_success_modal(self):
-        # Ждём появления заголовка «Заказ оформлен» 
-        self.wait.until(EC.visibility_of_element_located(self.MODAL_SUCCESS_HEADER))
-
-    def close_success_modal_and_wait(self):
-        # Закрываем попап и ждём его полного исчезновения перед кликом по логотипу
-        BUTTON_VIEW_STATUS = (  # кнопка «Посмотреть статус» закрывает попап, но оставаясь на /order
+        option_locator = (
             By.XPATH,
-            "//button[contains(text(),'Посмотреть статус')]",
+            f"//button[.//div[text()='{station_name}']]",
         )
-        try:
-            btn = self.wait.until(EC.element_to_be_clickable(BUTTON_VIEW_STATUS))  # ждём кнопку закрытия
-            btn.click()  # закрываем
-        except Exception:
-            pass  
+        option = self.wait_clickable(option_locator)  # ждём появления станции в списке
+        self.scroll_to_element_layout(option)     
+        option.click()   # выбираем станцию
 
-        self.wait.until(EC.invisibility_of_element_located(self.MODAL_SUCCESS_HEADER))  
+        metro.send_keys(Keys.ESCAPE)  # закрываем выпадающий список клавишей Escape
+
+    @allure.step("Нажать «Далее» на шаге 1")
+    def click_next(self) -> None:
+
+        #переход к шагу 2 формы
+        self.wait_clickable(self.BUTTON_NEXT).click()
+
+
+    # Методы шага 2
+
+    @allure.step("Заполнить дату доставки, срок аренды и цвет самоката")
+    def fill_rent_details(self, date_dd_mm_yyyy: str, period_label: str, color: str) -> None:
+
+        #вводим дату, выбираем срок аренды и отмечаем цвет
+        date_el = self.wait_visible(self.DELIVERY_DATE)
+        date_el.click()                        
+        date_el.send_keys(Keys.CONTROL, "a")  # выделяем всё содержимое поля
+        date_el.send_keys(Keys.BACKSPACE)  # стираем выделенное — поле теперь пустое
+        date_el.send_keys(date_dd_mm_yyyy)  # вводим дату в формате ДД.ММ.ГГГГ
+        date_el.send_keys(Keys.ESCAPE)  # закрываем календарь, если он открылся
+
+        # Ждём пока календарь полностью закроется 
+        self.wait_invisible(
+            (By.CLASS_NAME, "react-datepicker__day-name"),  
+        )
+
+        #срок аренды 
+        self.wait_clickable(self.RENT_PERIOD_FIELD).click()  # открываем список вариантов
+
+        # Локатор опции 
+        period_locator = (
+            By.XPATH,
+            (
+                f"//div[contains(@class,'Dropdown-menu')]//div[text()='{period_label}']"
+                f" | //div[contains(@class,'Dropdown-option') and text()='{period_label}']"
+            ),
+        )
+        self.wait_clickable(period_locator).click()  # выбираем срок аренды
+
+        #цвет самоката 
+        color_id = "black" if color.lower() in ("чёрный", "черный", "black") else "grey"
+        color_box = self.wait_clickable((By.ID, color_id))  # находим нужный чекбокс 
+        self.scroll_to_element_layout(color_box)  
+        color_box.click()   # отмечаем цвет
+
+   
+    # Методы подтверждения и проверки результата
+  
+
+    @allure.step("Отправить заказ и подтвердить в диалоге")
+    def submit_order(self) -> None:
+
+        self.wait_clickable(self.BUTTON_ORDER).click()    # кнопка «Заказать» на шаге 2
+        self.wait_clickable(self.BUTTON_YES, wait_timeout=10).click()  # подтверждение в диалоге
+
+    @allure.step("Дождаться модального окна «Заказ оформлен»")
+    def wait_success_modal(self) -> None:
+
+        #проверяем что после подтверждения появился попап с заголовком «Заказ оформлен»
+        self.wait_visible(self.MODAL_SUCCESS_HEADER)  
+
+    @allure.step("Закрыть окно успеха и дождаться его скрытия")
+    def close_success_modal_and_wait(self) -> None:
+
+        #кликаем «Посмотреть статус» и ждём, пока попап исчезнет
+        self.wait_clickable(self.BUTTON_VIEW_STATUS).click()   # закрываем попап 
+        self.wait_invisible(self.MODAL_SUCCESS_HEADER) # ждём исчезновения
+
