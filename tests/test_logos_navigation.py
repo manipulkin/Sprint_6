@@ -1,9 +1,7 @@
 # Тесты навигации по логотипам в шапке страницы
-# Замечание 7 исправлено: логотипы вынесены в ОТДЕЛЬНЫЙ тест-файл
 
 import allure  
 
-from config.urls import SITE_HOST    
 from pages.main_page import MainPage  
 
 
@@ -32,10 +30,11 @@ class TestHeaderLogosNavigation:
 
         with allure.step("Логотип «Самокат» ведёт на главную страницу сервиса"):
             main.click_scooter_logo()          # кликаем по логотипу самоката
-            main.wait_url_contains(SITE_HOST, wait_timeout=20)  # ждём, пока URL изменится на главную
+            main.wait_url_contains(main.get_site_host(), wait_timeout=20)  # ждём, пока URL изменится на главную
             current_url = main.get_current_url()
-            assert "/order" not in current_url, (               # убеждаемся, что мы не на странице заказа
-                f"Ожидали главную страницу самоката, но URL всё ещё содержит /order: {current_url}"
+            base_url = main.get_base_url()
+            assert current_url == base_url, (
+                f"Ожидался URL {base_url}, но получен {current_url}"
             )
 
         with allure.step("Логотип Яндекса открывает новую вкладку с Дзеном"):
