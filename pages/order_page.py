@@ -7,6 +7,15 @@ from selenium.webdriver.common.by import By
 
 from pages.base_page import BasePage           
 
+_COLOR_ID_BY_NAME = {
+    "чёрный": "black",
+    "черный": "black",
+    "black":  "black",
+    "серый":  "grey",
+    "grey":   "grey",
+    "gray":   "grey",
+}
+
 #Page Object формы заказа самоката
 class OrderPage(BasePage):
 
@@ -29,6 +38,8 @@ class OrderPage(BasePage):
         By.XPATH,
         "//div[contains(@class,'Dropdown-placeholder') and contains(.,'Срок аренды')]",
     )
+
+    DATEPICKER_DAY_NAME = (By.CLASS_NAME, "react-datepicker__day-name")
 
    
     # Локаторы подтверждения заказа
@@ -56,6 +67,25 @@ class OrderPage(BasePage):
         "//button[contains(text(),'Посмотреть статус')]",
     )
 
+    @staticmethod
+    def _metro_option_locator(station_name: str) -> tuple:
+        return (By.XPATH, f"//button[.//div[text()='{station_name}']]")
+
+
+    @staticmethod
+    def _rent_period_option_locator(period_label: str) -> tuple:
+        # Локатор пункта в выпадающем списке «Срок аренды»
+        return (
+            By.XPATH,
+            f"//div[contains(@class,'Dropdown-menu')]//div[text()='{period_label}']"
+            f" | //div[contains(@class,'Dropdown-option') and text()='{period_label}']",
+        )
+
+    @staticmethod
+    def _color_checkbox_locator(color: str) -> tuple:
+        # Локатор чекбокса цвета: маппинг названия → id берём из _COLOR_ID_BY_NAME
+        color_id = _COLOR_ID_BY_NAME.get(color.lower().strip(), "grey")
+        return (By.ID, color_id)
 
     # Методы шага 1
 
@@ -82,11 +112,7 @@ class OrderPage(BasePage):
         metro.click()               
         metro.send_keys(station_name)  # вводим название
 
-        option_locator = (
-            By.XPATH,
-            f"//button[.//div[text()='{station_name}']]",
-        )
-        option = self.wait_clickable(option_locator)  # ждём появления станции в списке
+        option = self.wait_clickable(self._metro_option_locator(station_name))
         self.scroll_to_element_layout(option)     
         option.click()   # выбираем станцию
 
@@ -112,28 +138,18 @@ class OrderPage(BasePage):
         date_el.send_keys(date_dd_mm_yyyy)  # вводим дату в формате ДД.ММ.ГГГГ
         date_el.send_keys(Keys.ESCAPE)  # закрываем календарь, если он открылся
 
-        # Ждём пока календарь полностью закроется 
-        self.wait_invisible(
-            (By.CLASS_NAME, "react-datepicker__day-name"),  
-        )
+        #(ПРАВКА) локатор раньше был инлайн, теперь это атрибут класса DATEPICKER_DAY_NAME
+        self.wait_invisible(self.DATEPICKER_DAY_NAME)  # ждём, пока календарь полностью закроется
 
         #срок аренды 
         self.wait_clickable(self.RENT_PERIOD_FIELD).click()  # открываем список вариантов
 
-        # Локатор опции 
-        period_locator = (
-            By.XPATH,
-            (
-                f"//div[contains(@class,'Dropdown-menu')]//div[text()='{period_label}']"
-                f" | //div[contains(@class,'Dropdown-option') and text()='{period_label}']"
-            ),
-        )
-        self.wait_clickable(period_locator).click()  # выбираем срок аренды
+        #(ПРАВКА) локатор пункта списка теперь возвращает _rent_period_option_locator
+        self.wait_clickable(self._rent_period_option_locator(period_label)).click()
 
-        #цвет самоката 
-        color_id = "black" if color.lower() in ("чёрный", "черный", "black") else "grey"
-        color_box = self.wait_clickable((By.ID, color_id))  # находим нужный чекбокс 
-        self.scroll_to_element_layout(color_box)  
+        #(ПРАВКА) локатор чекбокса цвета теперь возвращает _color_checkbox_locator
+        color_box = self.wait_clickable(self._color_checkbox_locator(color))
+        self.scroll_to_element_layout(color_box)
         color_box.click()   # отмечаем цвет
 
    
@@ -158,4 +174,8 @@ class OrderPage(BasePage):
         #кликаем «Посмотреть статус» и ждём, пока попап исчезнет
         self.wait_clickable(self.BUTTON_VIEW_STATUS).click()   # закрываем попап 
         self.wait_invisible(self.MODAL_SUCCESS_HEADER) # ждём исчезновения
+
+    @allure.step("Проверить, что перешли на страницу трекера заказа")
+    def wait_for_track_page(self) -> None:
+        self.wait_url_contains("/track", wait_timeout=20)
 
