@@ -3,7 +3,6 @@
  
 from __future__ import annotations  
  
-import time                          
 from typing import List, Tuple       
  
 import allure                                             
@@ -13,6 +12,7 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement       
 from selenium.webdriver.support import expected_conditions as EC 
 from selenium.webdriver.support.ui import WebDriverWait           
+from selenium.common.exceptions import TimeoutException  
  
  
 Locator = Tuple[By, str]
@@ -20,6 +20,7 @@ Locator = Tuple[By, str]
 #Базовый класс для всех Page Object проекта: инкапсулируем driver и WebDriverWait
 class BasePage:
     
+    @allure.step("Инициализация BasePage")
     def __init__(self, driver: WebDriver, wait_timeout: int = 15) -> None:
         self._driver = driver                              # храним драйвер как атрибут
         self._wait = WebDriverWait(driver, wait_timeout)  #  ожидание 15 сек для всех методов
@@ -34,6 +35,7 @@ class BasePage:
     
     #  Поиск элементов     
  
+    @allure.step("Найти все элементы по локатору {locator}")
     def find_elements(self, locator: Locator) -> List[WebElement]: 
         
         return self._driver.find_elements(*locator)  #Возвращаем список всех найденных элементов (пустой список, если ничего нет)
@@ -43,15 +45,18 @@ class BasePage:
     
     @allure.step("Кликнуть по элементу, если он станет кликабельным в течение {timeout} с")
     def click_if_clickable_within(self, locator: Locator, timeout: float = 3.0) -> bool:
-        
-        deadline = time.monotonic() + timeout     
-        while time.monotonic() < deadline:        # крутимся, пока не истёк таймаут
-            for element in self.find_elements(locator):   # перебираем все найденные элементы
-                if element.is_displayed() and element.is_enabled():  # проверяем видимость и доступность
-                    element.click()   # кликаем по первому подходящему
-                    return True                 
-            time.sleep(0.15)      # короткая пауза
-        return False          # за отведённое время кликабельный элемент не появился
+        #ПРАВКА локальный импорт TimeoutException убрала — он теперь в шапке файла
+        try:
+            element = WebDriverWait(self._driver, timeout).until(
+                lambda d: next((el for el in self.find_elements(locator) 
+                                if el.is_displayed() and el.is_enabled()), None)
+            )
+            if element:
+                element.click()
+                return True
+            return False
+        except TimeoutException:
+            return False
  
     @allure.step("Дождаться кликабельности элемента {locator}")
     def wait_clickable(self, locator: Locator, wait_timeout: int | None = None) -> WebElement:  
