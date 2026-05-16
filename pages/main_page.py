@@ -4,8 +4,8 @@
 import allure                          
 from selenium.webdriver.common.by import By  
 
-from config.urls import BASE_URL       
-from pages.base_page import BasePage   # базовый класс со всеми методами работы с WebDriver
+from config.urls import BASE_URL, SITE_HOST
+from pages.base_page import BasePage   
 
 #Локаторы объявлены как атрибуты класса 
 class MainPage(BasePage):
@@ -103,3 +103,14 @@ class MainPage(BasePage):
         #находим логотип Яндекса и кликаем, ожидаем открытие новой вкладки
         element = self.wait_present(self.LOGO_YANDEX)
         self.move_to_element_and_click(element)
+
+    @allure.step("Получить базовый URL стенда")
+    def get_base_url(self) -> str:
+        #ПРАВКА локальный импорт убран  BASE_URL импортируется в шапке модуля
+        return BASE_URL
+
+    @allure.step("Получить хост текущего стенда")
+    def get_site_host(self) -> str:
+        #ПРАВКА локальный импорт убран, SITE_HOST импортируется в шапке модуля
+        return SITE_HOST
+    
