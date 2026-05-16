@@ -21,3 +21,8 @@ CUSTOMER_AGAFYA = {
     "period":     "двое суток",
     "color":      "серый",
 }
+
+ORDER_CASES = [
+    (True,  CUSTOMER_AKAKIY),
+    (False, CUSTOMER_AGAFYA),
+]

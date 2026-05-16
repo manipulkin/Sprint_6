@@ -1,33 +1,40 @@
 # Позитивный сценарий оформления заказа — до появления окна «Заказ оформлен»
 
 import allure
-#ПРАВКА параметризация была заменена двумя независимыми тестами
+import pytest
 
-from pages.main_page import MainPage   
+from pages.main_page import MainPage
 from pages.order_page import OrderPage
-from config.data import CUSTOMER_AKAKIY, CUSTOMER_AGAFYA   
+# ИСПРАВЛЕНО: импортируем ORDER_CASES — список данных для параметризации
+from config.data import ORDER_CASES
 
 
-@allure.parent_suite("Тесты оформления заказа")  # верхний уровень в разделе «Сюиты»
-@allure.title("Позитивный сценарий заказа")   # отображается вместо имени класса
-@allure.feature("Оформление заказа")    # группировка в разделе «Категории»
-@allure.story("Позитивный сценарий")   # подгруппа внутри «Категорий»
-
-# Проверка оформления заказа
+@allure.parent_suite("Тесты оформления заказа")
+@allure.feature("Оформление заказа")
+@allure.story("Позитивный сценарий")
 class TestOrderHappyPath:
 
-    @allure.title("Оформление заказа через верхнюю кнопку «Заказать» (клиент Акакий)")
-    def test_order_from_top_button(self, driver):
+    @pytest.mark.parametrize(
+        "is_header, customer",
+        ORDER_CASES,
+        ids=["Верхняя_кнопка", "Нижняя_кнопка"],
+    )
+    @allure.title("Оформление заказа: верхняя и нижняя кнопки «Заказать»")
+    @allure.description(
+        "Параметризованный тест проверяет полный флоу заказа "
+        "для двух точек входа и двух наборов данных"
+    )
+    def test_successful_order(self, driver, is_header, customer):
         main = MainPage(driver)
         order = OrderPage(driver)
-        customer = CUSTOMER_AKAKIY
 
-        with allure.step("Главная страница"):
+        with allure.step("Открыть главную страницу и принять cookies"):
             main.open()
             main.accept_cookies_if_shown()
 
-        with allure.step("Перейти к форме заказа через верхнюю кнопку «Заказать»"):
-            main.click_order_top()
+        with allure.step("Перейти к форме заказа"):
+            # if отсутствует — логика выбора кнопки внутри go_to_order()
+            main.go_to_order(is_header=is_header)
 
         with allure.step("Шаг 1 формы — личные данные и метро"):
             order.fill_personal_data(
@@ -55,45 +62,6 @@ class TestOrderHappyPath:
         with allure.step("Закрыть попап и убедиться, что перешли на страницу трекера"):
             order.close_success_modal_and_wait()
             order.wait_for_track_page()
-            assert "/track" in order.get_current_url(), "Не удалось перейти на страницу трекера заказа"
-
-    @allure.title("Оформление заказа через нижнюю кнопку «Заказать» (клиент Агафья)")
-    def test_order_from_bottom_button(self, driver):
-        main = MainPage(driver)
-        order = OrderPage(driver)
-        customer = CUSTOMER_AGAFYA
-
-        with allure.step("Главная страница"):
-            main.open()
-            main.accept_cookies_if_shown()
-
-        with allure.step("Перейти к форме заказа через нижнюю кнопку «Заказать»"):
-            main.click_order_bottom()
-
-        with allure.step("Шаг 1 формы — личные данные и метро"):
-            order.fill_personal_data(
-                customer["first_name"],
-                customer["last_name"],
-                customer["address"],
-                customer["phone"],
+            assert "/track" in order.get_current_url(), (
+                "Не удалось перейти на страницу трекера заказа"
             )
-            order.select_metro(customer["metro"])
-
-        with allure.step("Шаг 2 формы — дата, срок, цвет"):
-            order.click_next()
-            order.fill_rent_details(
-                customer["date"],
-                customer["period"],
-                customer["color"],
-            )
-
-        with allure.step("Отправить заказ"):
-            order.submit_order()
-
-        with allure.step("Проверить попап «Заказ оформлен»"):
-            order.wait_success_modal()
-
-        with allure.step("Закрыть попап и убедиться, что перешли на страницу трекера"):
-            order.close_success_modal_and_wait()
-            order.wait_for_track_page()
-            assert "/track" in order.get_current_url(), "Не удалось перейти на страницу трекера заказа"
