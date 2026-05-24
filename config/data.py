@@ -1,0 +1,28 @@
+# Тестовые данные для оформления заказа
+
+CUSTOMER_AKAKIY = {
+    "first_name": "Акакий",
+    "last_name":  "Огурцов",
+    "phone":      "+79998884545",
+    "metro":      "Черкизовская",
+    "address":    "г. Москва, ул. Тестовая, д. 1",
+    "date":       "01.12.2026",
+    "period":     "сутки",
+    "color":      "чёрный",
+}
+
+CUSTOMER_AGAFYA = {
+    "first_name": "Агафья",
+    "last_name":  "Ручковна",
+    "phone":      "+79031234567",
+    "metro":      "Сокольники",
+    "address":    "г. Москва, ул. Примерная, д. 2",
+    "date":       "05.12.2026",
+    "period":     "двое суток",
+    "color":      "серый",
+}
+
+ORDER_CASES = [
+    (True,  CUSTOMER_AKAKIY),
+    (False, CUSTOMER_AGAFYA),
+]

@@ -1,0 +1,6 @@
+selenium==4.18.1
+pytest==7.4.4
+allure-pytest==2.13.5
+allure-python-commons==2.13.5
+pytest-parametrize-cases==0.1.1
+webdriver-manager==4.0.1
